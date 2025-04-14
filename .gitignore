@@ -136,6 +136,13 @@ ENV/
 env.bak/
 venv.bak/
 
+# Project specific
+*.html
+.DS_Store
+.env.local
+credentials.json
+openrouter_key.txt
+
 # Spyder project settings
 .spyderproject
 .spyproject
