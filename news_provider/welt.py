@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 from typing import List, Optional
+from toolz import curry
 from .provider import NewsProvider, NewsArticle, News
 
 class WeltArticle(NewsArticle):
@@ -46,10 +47,3 @@ class WeltProvider(NewsProvider):
     
     def __iter__(self):
         return iter(self.articles)
-
-
-# Helper function to create a WeltProvider from a News object
-def create_welt_provider(news: News) -> WeltProvider:
-    if news.name != "welt":
-        raise ValueError("News source is not Welt")
-    return WeltProvider(news.content)

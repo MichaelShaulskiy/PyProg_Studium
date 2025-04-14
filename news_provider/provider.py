@@ -1,5 +1,6 @@
-from typing import List, Optional, Iterable
+from typing import List, Optional, Iterable, Iterator, ForwardRef
 from bs4 import BeautifulSoup
+from abc import ABC
 
 class NewsArticle(object):
     """Represents a single news article."""
@@ -15,8 +16,22 @@ class NewsProvider(object):
     A constructed NewsProvider Object is iterable.
     """
     
-    def __init__(self, site: str) -> Iterable[None]:
+    def __init__(self, site: str) -> None:
         pass
+
+    def __iter__(self) -> Iterator["NewsProvider"]:
+        """
+        Returns an iterator over the articles.
+        This method should be implemented by subclasses.
+        """
+        raise NotImplementedError("Subclasses must implement __iter__ method")
+    
+    def __next__(self) -> Iterable["NewsProvider"]:
+        """
+        Returns the next article.
+        This method should be implemented by subclasses.
+        """
+        raise NotImplementedError("Subclasses must implement __next__ method")
 
 class News(object):
     """Represents a news source with associated articles."""

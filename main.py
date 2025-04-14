@@ -1,12 +1,28 @@
 import requests
 from pprint import pprint
 from openai import OpenAI
+import openai
 import os
 from typing import List, Tuple, Optional, Any
 from bs4 import BeautifulSoup
 
 # Import the classes from our new package
-from news_provider import NewsProvider, NewsArticle, News
+#from news_provider import NewsProvider, NewsArticle, News
+
+class News(object):
+    """Represents a news source with associated articles."""
+
+    def __init__(self, name: str, url: str) -> None:
+        self.name = name
+        self.url = url
+        self.content = ""
+        self.file = f"{self.name}.html"
+        self._retrycount: int = 0
+        self.articles: List[Optional["NewsArticle"]] = []
+    
+    def extract_articles(self):
+        pass
+
 
 def extract_welt_articles(self: News) -> None:
     soup = BeautifulSoup(site.content, "html.parser")
