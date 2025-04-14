@@ -5,20 +5,8 @@ import os
 from typing import List, Tuple, Optional, Any
 from bs4 import BeautifulSoup
 
-class NewsArticle(object):
-    pass
-
-class News(object):
-
-    def __init__(self, name: str, url: str) -> None:
-        self.name = name
-        self.url = url
-        self.content = ""
-        self.file = f"{self.name}.html"
-        self._retrycount = 0
-    
-    def extract_articles(self):
-        pass
+# Import the classes from our new package
+from news_provider import NewsProvider, NewsArticle, News
 
 def extract_welt_articles(self: News) -> None:
     soup = BeautifulSoup(site.content, "html.parser")
@@ -34,7 +22,7 @@ openrouter_client = OpenAI(
 
 NEWS_SOURCES = [
     News("welt","https://www.welt.de/"),
-    News("spiegel","https://www.spiegel.de/"),
+    News("spiegel","https:/www.spiegel.de/"),
     News("zeit","https://www.zeit.de/index"),
     News("kyivpost","https://www.kyivpost.com/")
 ]
