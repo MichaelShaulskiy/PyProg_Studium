@@ -114,4 +114,3 @@ def test_welt_extract():
         content = "".join(f.readlines())
         soup = BeautifulSoup(content, "html.parser")
         pprint(soup.findAll("a", class_="is-teaser-link"))
-test_welt_extract()

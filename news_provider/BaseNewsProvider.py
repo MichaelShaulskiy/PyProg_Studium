@@ -9,5 +9,4 @@ class CBaseNewsProvider(NewsProvider):
     etc...
     """
     def __init__(self, site):
-        
         super().__init__(site)
