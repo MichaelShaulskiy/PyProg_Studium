@@ -1,24 +1,11 @@
-from typing import List, Optional, Iterable, Iterator
+from typing import List, Optional, Iterable, Iterator, Callable
 from bs4 import BeautifulSoup
 from abc import ABC, abstractmethod
-from toolz import curry, memoize # type: ignore
+from toolz import curry, memoize, pipe # type: ignore
 import requests
 from pprint import pprint
 from openai import OpenAI
-
-def _fetch_source(url: str) -> Optional[str]:
-    def __inner_try(url):
-        res = requests.get(url)
-        res.raise_for_status()
-        return res.text
-    try:
-       res = __inner_try(url)
-       pprint(res)
-       return res
-    except:
-        print("fetch failed")
-
-    return ""
+from .util import NewsUtil
 
 class NewsProvider(ABC):
     """
@@ -63,6 +50,7 @@ class NewsProvider(ABC):
         """
         Downloads the page and returns true if sucessfull, false if not
         """
+        pass
 
     @abstractmethod
     def parse(self) -> Optional[List["NewsProvider"]]:
@@ -94,7 +82,16 @@ class CBaseNewsProvider(NewsProvider):
     def _download_page(self) -> None:
         pass
 
-BaseNewsProvider = curry(CBaseNewsProvider)
+    def __iter__(self) -> Iterator[NewsProvider]:
+        return super().__iter__()
+    
+    def __next__(self) -> Iterable[NewsProvider]:
+        return super().__next__()
+    
+    def parse(self) -> List[NewsProvider] | None:
+        return super().parse()
+
+BaseNewsProvider = curry(CBaseNewsProvider, 5)
 
 
 
@@ -113,4 +110,4 @@ class News(object):
         pass
 
 if __name__ == "__main__":
-    _fetch_source("https://www.welt.de/")
+    NewsUtil.fetch_source("https://www.welt.de/")

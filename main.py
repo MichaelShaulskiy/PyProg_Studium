@@ -40,7 +40,8 @@ NEWS_SOURCES = [
     News("welt","https://www.welt.de/"),
     News("spiegel","https:/www.spiegel.de/"),
     News("zeit","https://www.zeit.de/index"),
-    News("kyivpost","https://www.kyivpost.com/")
+    News("kyivpost","https://www.kyivpost.com/"),
+    News("kyivindependent", "https://kyivindependent.com/")
 ]
 
 MAX_RETRIES = 5
