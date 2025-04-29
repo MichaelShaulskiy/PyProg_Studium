@@ -50,6 +50,7 @@ def cacheenabledressource():
             requests.get = patched_get
             ret_func = func(*args, **kwargs)
             requests.get = orig_get
+            return ret_func
         return wrapper
     return decorator
 
@@ -67,7 +68,6 @@ class NewsUtil(object):
             return res.text
         try:
             res = __inner_try(url)
-            pprint(res)
             return res
         except requests.HTTPError as e:
             print(str(e))
