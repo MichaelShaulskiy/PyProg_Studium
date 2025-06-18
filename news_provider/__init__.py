@@ -1,7 +1,5 @@
-from .provider import NewsProvider, News, NewsArticle
-from .welt import WeltProvider, WeltArticle
+from .provider import NewsSite
 
 __all__ = [
-    'NewsProvider', 'News', 'NewsArticle',
-    'WeltProvider', 'WeltArticle'
+    'NewsSite'
 ]

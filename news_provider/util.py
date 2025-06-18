@@ -4,8 +4,9 @@ from pprint import pprint
 from dataclasses import dataclass
 import sqlite3
 import hashlib
+from datetime import datetime
 
-def cacheenabledressource():
+def cacheenabledressource(source_index: int):
     """
     Apply this decorator to have a webresource cached
     Lookups a ressource in the database and if it isn't stale
@@ -37,10 +38,12 @@ def cacheenabledressource():
             else:
                 # get the resource and put it into the database
                 response = orig_get(*args, **kwargs)
-                cursor.execute(f"""
-                               INSERT INTO NewsArticles (raw_article, hash)
-                               VALUES (?, ?);""",
-                               (response.text, thehash.hexdigest()))
+                timestamp = datetime.now().timestamp()
+                pprint(source_index)
+                cursor.execute("""
+                               INSERT INTO NewsArticles (source_id, raw_article, hash, timestamp)
+                               VALUES (?, ?, ?, ?);""",
+                               (source_index, response.text, thehash.hexdigest(), timestamp))
                 db_connection.commit()
                 return response
 
@@ -58,10 +61,26 @@ class NewsUtil(object):
 
     def __init__(self):
         assert False, "Don't construct NewsUtil"
+        self.root = None
+        
 
     @staticmethod
-    @cacheenabledressource()
+    @cacheenabledressource(1)
     def fetch_source(url: str) -> Optional[str]:
+        def __inner_try(url: str) -> str:
+            res = requests.get(url)
+            res.raise_for_status()
+            return res.text
+        try:
+            res = __inner_try(url)
+            return res
+        except requests.HTTPError as e:
+            print(str(e))
+
+        return ""
+    
+    @staticmethod
+    def fetch_articles(url):
         def __inner_try(url: str) -> str:
             res = requests.get(url)
             res.raise_for_status()
