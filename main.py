@@ -9,7 +9,7 @@ import sqlite3
 import time
 from PySide6.QtCore import QObject, Signal, Slot, QCoreApplication
 from news_provider.rssparser import RSSItem, RSS
-from news_provider.provider import NewsSite, NewsSourceIndex
+from news_provider.provider import NewsSite, NewsSourceIndex, TagesschauProcessor
 
 
 NEWS_SITES = []
@@ -85,6 +85,9 @@ def main():
     welt = NewsSite(2)
     sz = NewsSite(3)
     spiegel = NewsSite(4)
+
+    pprint(len(welt))
+    tagesschau.addArticleProcessor(TagesschauProcessor)
 
 if __name__ == "__main__":
     main()
