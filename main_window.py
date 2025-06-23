@@ -1,7 +1,7 @@
 import os
 from PySide6.QtCore import QSize, Qt, QDate
 from PySide6.QtGui import QAction, QIcon, QPixmap, QPainter
-from PySide6.QtWidgets import (QMainWindow, QPushButton, QStatusBar, QToolBar, QTextEdit,
+from PySide6.QtWidgets import (QMainWindow, QPushButton, QStatusBar, QToolBar, QTextEdit, QMessageBox,
 QHBoxLayout, QVBoxLayout, QWidget, QLabel, QSlider, QDateEdit, QSizePolicy, QCalendarWidget
 )
 
@@ -276,21 +276,58 @@ class SummaryWindow(QWidget):
 
     def setup_summary_window(self):
         self.setWindowTitle("Zusammenfassungen")
-        self.setup_toolbar()
         self.setup_notepad()
+        self.setup_toolbar()
         self.setup_layout()
 
 
     def setup_toolbar(self):
         self.toolbar = QToolBar()
-        self.toolbar.addAction("Edit")
-        self.toolbar.addAction("Save")
-        self.toolbar.addAction("File")
-        self.toolbar.addAction("Test")
+        self.cut_function = QAction("Cut", self)
+        self.toolbar.addAction(self.cut_function)
+        self.cut_function.triggered.connect(self.notepad.cut)
+
+        self.copy_function = QAction("Copy", self)
+        self.toolbar.addAction(self.copy_function)
+        self.copy_function.triggered.connect(self.notepad.copy)
+
+        self.paste_function = QAction("Paste", self)
+        self.toolbar.addAction(self.paste_function)
+        self.paste_function.triggered.connect(self.notepad.paste)
+
+        self.undo_function = QAction("Undo", self)
+        self.toolbar.addAction(self.undo_function)
+        self.undo_function.triggered.connect(self.notepad.undo)
+
+        self.redo_function = QAction("Redo", self)
+        self.toolbar.addAction(self.redo_function)
+        self.redo_function.triggered.connect(self.notepad.redo)
+
+        self.toolbar.addSeparator()
+
+        self.save_function = QAction("Save", self)
+        self.toolbar.addAction(self.save_function)
+        self.save_function.triggered.connect(self.save_to_txt) 
+
+        self.close_function = QAction("Close", self)
+        self.toolbar.addAction(self.close_function)
+        self.close_function.triggered.connect(self.close)
     
+    def save_to_txt (self):
+        with open("News_Summary.txt", "w") as file:
+            file.write(self.notepad.toPlainText())
+
+        confirmation_msg = QMessageBox()
+        confirmation_msg.setText(str("Zusammenfassung wurde unter dem aktuellen Pfad als News_Summary.txt gespeichert"))
+        confirmation_msg.exec()
+
+
+
     def setup_notepad(self):
+        # QTextEdit kann (nativ) keine klickbaren Links darstellen. Das würde mit QTextBrowser gehen - dann verlieren wir aber die Bearbeitungsfunktionalität... 
         self.notepad = QTextEdit()
         self.notepad.setHtml(self.html_test())
+        self.notepad.setOpenExternalLinks(True)
 
     def setup_layout(self):
         layout = QVBoxLayout()
@@ -305,6 +342,7 @@ class SummaryWindow(QWidget):
 	<li>Da war Kay! jubelte Gerda. O, dann habe ich ihn gefunden und dabei klatschte sie in die Hände.
 </li>
 	<li>Er hatte einen kleinen Ranzen auf seinem Rücken! sagte die Krähe.</li>
+    https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=RDdQw4w9WgXcQ&start_radio=1&ab_channel=RickAstley
 	<li>Nein, das war sicherlich sein Schlitten! sagte Gerda, denn damit ging er fort!</li>
 </ol>"""
         return self.text
