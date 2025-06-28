@@ -1,11 +1,16 @@
+from test_worker import NewsBackend, BackendWorker # test threading
+
 import os
-from PySide6.QtCore import QSize, Qt, QDate
-from PySide6.QtGui import QAction, QIcon, QPixmap, QPainter
-from PySide6.QtWidgets import (QMainWindow, QPushButton, QStatusBar, QToolBar, QTextEdit, QMessageBox,
-QHBoxLayout, QVBoxLayout, QWidget, QLabel, QSlider, QDateEdit, QSizePolicy, QCalendarWidget
+from summary_window import SummaryWindow
+from PySide6.QtCore import QSize, Qt, QDate, Signal, Slot
+from PySide6.QtGui import QIcon, QPixmap
+from PySide6.QtWidgets import (QMainWindow, QPushButton, QStatusBar, 
+QHBoxLayout, QVBoxLayout, QWidget, QLabel, QSlider, QDateEdit, 
 )
 
 class MainWindow(QMainWindow):
+    # setup Signal Dictionary for Communication with Backend
+    chosen_settings = Signal(dict)
 
     # setup the main window, the relative image path, the GUI widgets and the main-window-layout
     def __init__(self, app): 
@@ -16,7 +21,8 @@ class MainWindow(QMainWindow):
         self.setup_window()
         self.create_widgets()
         self.setup_main_layout()
-         
+        self.initialize_backend()
+
     # setup the frame of the main window
     def setup_window(self):
         self.setWindowTitle("NewsProvider")
@@ -36,7 +42,6 @@ class MainWindow(QMainWindow):
     # add matching icons, call the button-style-function and connect the buttons to each clicked-function
     def create_provider_buttons(self):
         '''PROVIDER BUTTONS'''
-        #tbd: Icons github 
         self.spiegel_button = QPushButton(icon=QIcon(os.path.join(self.image_path, "Spiegel.jpg")))
         self.apply_provider_button_style(self.spiegel_button)
         self.spiegel_button.clicked.connect(self.spiegel_clicked)
@@ -226,23 +231,48 @@ class MainWindow(QMainWindow):
             }
         """)
 
-    # button connections to the backend
+    # show an infomsg at the statusbar if the user changes the desired providers (every provider buttons_clicked function)
     def spiegel_clicked(self):
-        self.statusBar().showMessage("Spiegel clicked", 2000)
+        if self.spiegel_button.isChecked() == True:
+            self.statusBar().showMessage("Spiegel ausgewählt ✓", 2000)
+            return True
+        elif self.spiegel_button.isChecked() == False:
+            self.statusBar().showMessage("Spiegel abgewählt ✕", 2000)
+            return False
+        else:
+            self.statusBar().showMessage("Fehler beim Auswählen der Provider [SPIEGEL]", 2000)
      
-    # button connections to the backend
     def welt_clicked(self):
-        self.statusBar().showMessage("Welt clicked", 2000)
+        if self.welt_button.isChecked() == True:
+            self.statusBar().showMessage("Welt ausgewählt ✓", 2000)
+            return True
+        elif self.welt_button.isChecked() == False:
+            self.statusBar().showMessage("Welt abgewählt ✕", 2000)
+            return False
+        else:
+            self.statusBar().showMessage("Fehler beim Auswählen der Provider [WELT]", 2000)
 
-    # button connections to the backend
     def tagesschau_clicked(self):
-        self.statusBar().showMessage("Tagesschau clicked", 2000)
+        if self.tagesschau_button.isChecked() == True:
+            self.statusBar().showMessage("Tagesschau ausgewählt ✓", 2000)
+            return True
+        elif self.tagesschau_button.isChecked() == False:
+            self.statusBar().showMessage("Tagesschau abgewählt ✕", 2000)
+            return False
+        else:
+            self.statusBar().showMessage("Fehler beim Auswählen der Provider [TAGESSCHAU]", 2000)
 
-    # button connections to the backend
     def sz_clicked(self):
-        self.statusBar().showMessage("Süddeutsche clicked", 2000)
+        if self.sz_button.isChecked() == True:
+            self.statusBar().showMessage("Süddeutsche ausgewählt ✓", 2000)
+            return True
+        elif self.sz_button.isChecked() == False:
+            self.statusBar().showMessage("Süddeutsche abgewählt ✕", 2000)
+            return False
+        else:
+            self.statusBar().showMessage("Fehler beim Auswählen der Provider [Süddeutsche]", 2000)
 
-    # setup the slider style to make it more intuitive to use
+    # change the slider style to make it more intuitive to use
     def apply_slider_style(self, slider):
         slider.setMinimum(1)
         slider.setMaximum(4)
@@ -262,81 +292,44 @@ class MainWindow(QMainWindow):
 
     # connect go button 
     def go_button_clicked(self):
-         self.statusBar().showMessage("Go! clicked", 2000)
-         self.summary_window = SummaryWindow()
-         self.summary_window.show()
-
-class SummaryWindow(QWidget):
-
-    def __init__(self):
-        super().__init__()
-        self.setup_summary_window()
+         # TODO: Loading screen, Threading and
+         self.statusBar().showMessage("Artikel werden zusammengefasst... ", 2000)
+         settings = self.get_chosen_settings()
 
 
+         self.backend.process_settings(settings)
 
-    def setup_summary_window(self):
-        self.setWindowTitle("Zusammenfassungen")
-        self.setup_notepad()
-        self.setup_toolbar()
-        self.setup_layout()
+    # Summarize settings chosen from the User and emit it to the backend
+    def get_chosen_settings(self):
+        settings = {
+            # isChecked returns a bool.
+            "spiegel": self.spiegel_button.isChecked(), # source_id "4" in News.db 
+            "welt": self.welt_button.isChecked(), # source_id "2" in News.db 
+            "tagesschau": self.tagesschau_button.isChecked(), # source_id "1" in News.db 
+            "sz":self.sz_button.isChecked(), # source_id "3" in News.db 
+            # returns a String.
+            "date": self.date_edit.date().toString("yyyy-MM-dd"),
+            # returns an int between 1 and 4.
+            # (each Article: 1 = 1 Sentence, 2 = 2 Sentences, 3 = 4 Sentences, 4 = 6 Sentences)
+            "length": self.slider.value()
+        }
+        self.chosen_settings.emit(settings)
+        return settings
+    def initialize_backend(self):
+        self.backend = NewsBackend()
+        self.backend.results_available.connect(self.on_results_ready)
+        # self.backend.processing_finished.connect(self.on_processing_finished) # IST NUR FÜR DEN LOADINGSCREEN 
 
-
-    def setup_toolbar(self):
-        self.toolbar = QToolBar()
-        self.cut_function = QAction("Cut", self)
-        self.toolbar.addAction(self.cut_function)
-        self.cut_function.triggered.connect(self.notepad.cut)
-
-        self.copy_function = QAction("Copy", self)
-        self.toolbar.addAction(self.copy_function)
-        self.copy_function.triggered.connect(self.notepad.copy)
-
-        self.paste_function = QAction("Paste", self)
-        self.toolbar.addAction(self.paste_function)
-        self.paste_function.triggered.connect(self.notepad.paste)
-
-        self.undo_function = QAction("Undo", self)
-        self.toolbar.addAction(self.undo_function)
-        self.undo_function.triggered.connect(self.notepad.undo)
-
-        self.redo_function = QAction("Redo", self)
-        self.toolbar.addAction(self.redo_function)
-        self.redo_function.triggered.connect(self.notepad.redo)
-
-        self.toolbar.addSeparator()
-
-        self.save_function = QAction("Save", self)
-        self.toolbar.addAction(self.save_function)
-        self.save_function.triggered.connect(self.save_to_txt) 
-
-        self.close_function = QAction("Close", self)
-        self.toolbar.addAction(self.close_function)
-        self.close_function.triggered.connect(self.close)
     
-    def save_to_txt (self):
-        with open("News_Summary.txt", "w") as file:
-            file.write(self.notepad.toPlainText())
-
-        confirmation_msg = QMessageBox()
-        confirmation_msg.setText(str("Zusammenfassung wurde unter dem aktuellen Pfad als News_Summary.txt gespeichert"))
-        confirmation_msg.exec()
+    @Slot(list)
+    def on_results_ready(self, results):
+        self.summary_window = SummaryWindow(results=results)
+        self.summary_window.show()
 
 
 
-    def setup_notepad(self):
-        # QTextEdit kann (nativ) keine klickbaren Links darstellen. Das würde mit QTextBrowser gehen - dann verlieren wir aber die Bearbeitungsfunktionalität... 
-        self.notepad = QTextEdit()
-        self.notepad.setHtml(self.html_test())
-        self.notepad.setOpenExternalLinks(True)
-
-    def setup_layout(self):
-        layout = QVBoxLayout()
-        layout.addWidget(self.toolbar)
-        layout.addWidget(self.notepad)
-        self.setLayout(layout)
-
-    def html_test(self):
-        self.text ="""<ol>
+    """def show_articles(self):
+        self.text =<ol>
 	<li>Aber Kay, der kleine Kay! fragte Gerda. Wann kam er? Befand er sich unter der Menge?</li>
 	<li>Eil mit Weile! nun sind wir gerade bei ihm! Am dritten Tage kam eine kleine Person, weder mit Pferd, noch mit Wagen, ganz lustig und guter Dinge gerade auf das Schloss hinaufspaziert. Seine Augen blitzten wie deine, er hatte prächtiges langes Haar, aber sonst ärmliche Kleider.</li>
 	<li>Da war Kay! jubelte Gerda. O, dann habe ich ihn gefunden und dabei klatschte sie in die Hände.
@@ -344,6 +337,6 @@ class SummaryWindow(QWidget):
 	<li>Er hatte einen kleinen Ranzen auf seinem Rücken! sagte die Krähe.</li>
     https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=RDdQw4w9WgXcQ&start_radio=1&ab_channel=RickAstley
 	<li>Nein, das war sicherlich sein Schlitten! sagte Gerda, denn damit ging er fort!</li>
-</ol>"""
-        return self.text
+</ol>
+        return self.text"""
     
