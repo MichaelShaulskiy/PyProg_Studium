@@ -41,9 +41,9 @@ def cacheenabledressource(source_index: int):
                 timestamp = datetime.now().timestamp()
                 pprint(source_index)
                 cursor.execute("""
-                               INSERT INTO NewsArticles (source_id, raw_article, hash, timestamp)
-                               VALUES (?, ?, ?, ?);""",
-                               (source_index, response.text, thehash.hexdigest(), timestamp))
+                               INSERT INTO NewsArticles (source_id, raw_article, hash, timestamp, article_link)
+                               VALUES (?, ?, ?, ?, ?);""",
+                               (source_index, response.text, thehash.hexdigest(), timestamp, args[0]))
                 db_connection.commit()
                 return response
 
