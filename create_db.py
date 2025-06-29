@@ -1,18 +1,8 @@
-import requests
-from pprint import pprint
-from openai import OpenAI
-import openai
-import os
-from typing import List, Tuple, Optional, Any
-from bs4 import BeautifulSoup
 import sqlite3
+import os
+import requests
 import time
-from PySide6.QtCore import QObject, Signal, Slot, QCoreApplication
-from news_provider.rssparser import RSSItem, RSS
-from news_provider.provider import NewsSite, NewsSourceIndex, TagesschauProcessor
 
-
-NEWS_SITES = []
 NEWS_SOURCES = [
     {
         "name": "Tagesschau",
@@ -32,6 +22,7 @@ NEWS_SOURCES = [
     }
 ] 
 
+
 def fetch_with_retry(url, times=5, timeout=1000):
     for curr in range(0, times):
         try:
@@ -42,16 +33,7 @@ def fetch_with_retry(url, times=5, timeout=1000):
             time.sleep(timeout)
             continue
 
-# TODO: Kann die erstellung einer sqllite db überhaupt fehlschlagen?
-# Error handling betreiben wenn ja
-
-# SOMEHOW THIS DOESN'T WORK ON WINDOWS
-# IT CREATES A DB FILE BUT WITH NO SCHEMA
-# SO WE WILL CREATE THE DB EXTERNALY
-# WORKS FINE ON MAC THOUGH
-def setup_db():
-    if os.path.exists("News.db"):
-        return  # Do not recreate if DB already exists
+if __name__ == "__main__":
     with sqlite3.connect("News.db") as conn:
         cursor = conn.cursor()
         cursor.execute("CREATE TABLE IF NOT EXISTS NewsSources (source_id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, url TEXT, last_queried INTEGER, rss_content TEXT, hash TEXT);")
@@ -76,25 +58,3 @@ def setup_db():
                 VALUES (?, ?, ?, ?, ?)
                 """, (source["name"], source["url"], int(time.time()), rss_feed, "NOT HASHED"))
         conn.commit()
-
-def initial_rss_fetch():
-    with sqlite3.connect("News.db") as conn:
-        cursor = conn.cursor()
-
-
-
-def main():
-    #setup_db()
-    tagesschau = NewsSite(1)
-    welt = NewsSite(2)
-    sz = NewsSite(3)
-    spiegel = NewsSite(4)
-
-    pprint(len(welt))
-    tagesschau.addArticleProcessor(TagesschauProcessor)
-
-    for article in tagesschau:
-        print(article)        
-
-if __name__ == "__main__":
-    main()

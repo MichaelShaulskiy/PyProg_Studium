@@ -69,7 +69,12 @@ class TagesschauProcessor(ArticleProcessor):
     def __init__(self, article_id: int = 0, parent_site = None) -> None:
         super().__init__(article_id=article_id, parent_site=parent_site)
         cursor: sqlite3.Cursor = self._newssite.db.cursor()
-        self._create_article_view()
+        self.article_id = article_id
+        cursor.execute("SELECT raw_article FROM NewsArticles WHERE article_id = ?", (article_id,))
+        result = cursor.fetchone()
+        if result is None:
+            raise Exception("Article not found in database")
+        self._article = result[0]
         self._newssite.db.commit()
         self.soup = BeautifulSoup(self._article, "html.parser")
 
@@ -78,7 +83,13 @@ class TagesschauProcessor(ArticleProcessor):
         if not self.soup:
             raise Exception("soup not initialized")
         
-        content_node = self.soup.find()
+        content_node = self.soup.find("div", id="content").article
+        if content_node:
+            article_text = " " .join(content_node.get_text().splitlines())
+            cursor = self._newssite.db.cursor()
+            cursor.execute("UPDATE NewsArticles SET article_text = ? WHERE article_id = ?", (article_text, self.article_id))
+            self._newssite.db.commit()
+            
 
 class NewsSite:
 
@@ -92,6 +103,7 @@ class NewsSite:
         self.cursor = self.db.cursor()
         result = self.cursor.execute("SELECT source_id FROM NewsSources WHERE source_id = ?", (source_index,))
         result = result.fetchone()
+        self_article_id = None
         self.db.commit()
 
         if result is None:
@@ -115,17 +127,28 @@ class NewsSite:
         self.article_processor = aproc_constructor
         return self
     
+    def build(self):
+        if not self.article_processor:
+            raise Exception("No ArticleProcessor, can't build object")
+        
+        self.article_processor = self.article_processor(self._current_index, self)
+    
     def __iter__(self):
+        # Query all article_ids for this source_id and store them
+        self.cursor.execute("SELECT article_id FROM NewsArticles WHERE source_id = ?", (self.source_index,))
+        self._articles = [row[0] for row in self.cursor.fetchall()]
+        self._current_index = 0
         return self
     
     def __next__(self):
-        if self._current_index < len(self):
-            try:
-                self.cursor.executemany("SELECT raw_article FROM NewsArticles WHERE source_id = ?", (self.source_index,))
-                a = self.cursor.fetchmany()
-                self.cursor.commit()
-            except sqlite3.Error as e:
-                print("SQL Request failed")
+        if not self.article_processor:
+            raise Exception("No Article Processor set")
+        if self._current_index >= len(self._articles):
+            raise StopIteration
+        article_id = self._articles[self._current_index]
+        result = self.article_processor(article_id, self)
+        self._current_index += 1
+        return result.content()
 
     def __len__(self) -> int:
         cursor = self.db.cursor()
