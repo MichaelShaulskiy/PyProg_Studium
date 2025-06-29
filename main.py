@@ -122,11 +122,17 @@ def main():
     whole = []
 
     for article in tagesschau:
-        summary = summarize(article.content())
         with sqlite3.connect("News.db") as conn:
             cursor = conn.cursor()
-            cursor.execute("UPDATE NewsArticles SET summary = ? WHERE article_id = ?", (summary, article.id))
-            conn.commit()
+            cursor.execute("SELECT summary FROM NewsArticles WHERE article_id = ?", (article.id,))
+            result = cursor.fetchone()
+
+            if result and result[0]:
+                summary = result[0]
+            else:
+                summary = summarize(article.content())
+                cursor.execute("UPDATE NewsArticles SET summary = ? WHERE article_id = ?", (summary, article.id))
+                conn.commit()
         whole.append(summary)
     
     whole = " ".join(whole)
