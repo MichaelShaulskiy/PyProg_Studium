@@ -54,9 +54,26 @@ class MainWindow(QMainWindow):
         self.apply_provider_button_style(self.welt_button)
         self.welt_button.clicked.connect(self.welt_clicked)
 
-        self.sz_button = QPushButton(icon=QIcon(os.path.join(self.image_path, "SZ.png")))
-        self.apply_provider_button_style(self.sz_button)
-        self.sz_button.clicked.connect(self.sz_clicked)
+        self.good_news_button = QPushButton(icon=QIcon(os.path.join(self.image_path, "Good_news.png")))
+        self.apply_provider_button_style(self.good_news_button)
+        self.good_news_button.clicked.connect(self.good_news_clicked)
+
+    # setup the calendar/date-edit with a calendar popup to get the news of the selected date (if possible).
+    # Default is today
+    def create_date_edit(self):
+        '''DATE-EDIT'''
+        self.date_edit = QDateEdit()
+        self.date_edit.setDisplayFormat("dd.MM.yyyy")
+        today = QDate.currentDate()
+        self.date_edit.setDate(today)
+        self.date_edit.setCalendarPopup(True)
+
+    # setup slider to set the desired summary length 
+    def create_slider(self):
+        '''SLIDER'''
+        self.slider = QSlider(Qt.Orientation.Horizontal)
+        self.apply_slider_style(self.slider)
+        self.slider.valueChanged.connect(self.summary_length_changed)
 
     # setup every (informative/header) label & show some info at the statusbar when hovering over each label
     def create_labels(self):
@@ -73,19 +90,6 @@ class MainWindow(QMainWindow):
         self.slider_label.enterEvent = lambda z: self.statusBar().showMessage("Länge der gewünschten Zusammenfassung wählen. Default sind 2 Sätze pro Artikel")
         self.slider_label.leaveEvent = lambda z: self.statusBar().clearMessage()
 
-    # setup the calendar/date-edit with a calendar popup to get the news of the selected date (if possible).
-    # Default is today
-    def create_date_edit(self):
-        '''DATE-EDIT'''
-        
-        self.date_edit = QDateEdit()
-        self.date_edit.setDisplayFormat("dd.MM.yyyy")
-        today = QDate.currentDate()
-        self.date_edit.setDate(today)
-        self.date_edit.setCalendarPopup(True)
-
-
-
     # setup the GO! Button, apply it's own style and connect the clicked-function
     def create_go_button(self):
         '''GO BUTTON'''
@@ -94,13 +98,6 @@ class MainWindow(QMainWindow):
         self.apply_go_button_style(self.go_button)
         self.go_button.clicked.connect(self.go_button_clicked)
     
-    # setup slider to set the desired summary length 
-    def create_slider(self):
-        '''SLIDER'''
-        self.slider = QSlider(Qt.Orientation.Horizontal)
-        self.apply_slider_style(self.slider)
-        self.slider.valueChanged.connect(self.summary_length_changed)
-
     # setup the left-bound design element (just for aesthetic purposes)
     # opens the image into a label with a fixed width of 1/3 of the main window. Crops to set the desired width if necessary
     def create_design_element(self):
@@ -163,7 +160,7 @@ class MainWindow(QMainWindow):
         go_layout.addWidget(self.go_button)
         v_layout.addLayout(go_layout)
 
-        return v_layout # to use the v_layout in the main_layout function
+        return v_layout 
 
     # setup the last nested layout function for the provider buttons.
     def create_provider_buttons_layout(self):
@@ -178,10 +175,10 @@ class MainWindow(QMainWindow):
         '''Lower Row'''
         h_layout_2 = QHBoxLayout()
         h_layout_2.addWidget(self.welt_button)
-        h_layout_2.addWidget(self.sz_button)
+        h_layout_2.addWidget(self.good_news_button)
         v_layout.addLayout(h_layout_2)
 
-        return v_layout # to use the v_layout in the "create_right_v_layout" function
+        return v_layout 
 
     # setup the stylesheet of the provider buttons 
     # Set them as checkable, default is checked, with some more design ideas to make them look good and "clickable"
@@ -262,15 +259,15 @@ class MainWindow(QMainWindow):
         else:
             self.statusBar().showMessage("Fehler beim Auswählen der Provider [TAGESSCHAU]", 2000)
 
-    def sz_clicked(self):
-        if self.sz_button.isChecked() == True:
-            self.statusBar().showMessage("Süddeutsche ausgewählt ✓", 2000)
+    def good_news_clicked(self):
+        if self.good_news_button.isChecked() == True:
+            self.statusBar().showMessage("Good News ausgewählt ✓", 2000)
             return True
-        elif self.sz_button.isChecked() == False:
-            self.statusBar().showMessage("Süddeutsche abgewählt ✕", 2000)
+        elif self.good_news_button.isChecked() == False:
+            self.statusBar().showMessage("Good News abgewählt ✕", 2000)
             return False
         else:
-            self.statusBar().showMessage("Fehler beim Auswählen der Provider [Süddeutsche]", 2000)
+            self.statusBar().showMessage("Fehler beim Auswählen der Provider [Good News]", 2000)
 
     # change the slider style to make it more intuitive to use
     def apply_slider_style(self, slider):
@@ -306,7 +303,7 @@ class MainWindow(QMainWindow):
             "spiegel": self.spiegel_button.isChecked(), # source_id "4" in News.db 
             "welt": self.welt_button.isChecked(), # source_id "2" in News.db 
             "tagesschau": self.tagesschau_button.isChecked(), # source_id "1" in News.db 
-            "sz":self.sz_button.isChecked(), # source_id "3" in News.db 
+            "good_news":self.good_news_button.isChecked(), # source_id "3" in News.db 
             # returns a String.
             "date": self.date_edit.date().toString("yyyy-MM-dd"),
             # returns an int between 1 and 4.
@@ -315,6 +312,7 @@ class MainWindow(QMainWindow):
         }
         self.chosen_settings.emit(settings)
         return settings
+    
     def initialize_backend(self):
         self.backend = NewsBackend()
         self.backend.results_available.connect(self.on_results_ready)
@@ -327,16 +325,3 @@ class MainWindow(QMainWindow):
         self.summary_window.show()
 
 
-
-    """def show_articles(self):
-        self.text =<ol>
-	<li>Aber Kay, der kleine Kay! fragte Gerda. Wann kam er? Befand er sich unter der Menge?</li>
-	<li>Eil mit Weile! nun sind wir gerade bei ihm! Am dritten Tage kam eine kleine Person, weder mit Pferd, noch mit Wagen, ganz lustig und guter Dinge gerade auf das Schloss hinaufspaziert. Seine Augen blitzten wie deine, er hatte prächtiges langes Haar, aber sonst ärmliche Kleider.</li>
-	<li>Da war Kay! jubelte Gerda. O, dann habe ich ihn gefunden und dabei klatschte sie in die Hände.
-</li>
-	<li>Er hatte einen kleinen Ranzen auf seinem Rücken! sagte die Krähe.</li>
-    https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=RDdQw4w9WgXcQ&start_radio=1&ab_channel=RickAstley
-	<li>Nein, das war sicherlich sein Schlitten! sagte Gerda, denn damit ging er fort!</li>
-</ol>
-        return self.text"""
-    

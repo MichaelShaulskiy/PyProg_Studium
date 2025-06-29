@@ -10,14 +10,11 @@ class SummaryWindow(QWidget):
         self.results = results
         self.setup_summary_window()
 
-
-
     def setup_summary_window(self):
         self.setWindowTitle("Zusammenfassungen")
         self.setup_notepad()
         self.setup_toolbar()
         self.setup_layout()
-
 
     def setup_toolbar(self):
         self.toolbar = QToolBar()
@@ -58,8 +55,6 @@ class SummaryWindow(QWidget):
         confirmation_msg = QMessageBox()
         confirmation_msg.setText(str("Zusammenfassung wurde unter dem aktuellen Pfad als News_Summary.txt gespeichert"))
         confirmation_msg.exec()
-
-
 
     def setup_notepad(self):
         # QTextEdit kann (nativ) keine klickbaren Links darstellen. Das würde mit QTextBrowser gehen - dann verlieren wir aber die Bearbeitungsfunktionalität... 
