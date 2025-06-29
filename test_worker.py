@@ -1,5 +1,5 @@
 ''' NUR UM ZU TESTEN OB MEIN SLOT IM MAINWINDOW-PROGRAMM AUCH LÄUFT'''
-
+import time
 import sqlite3
 from PySide6.QtCore import QObject, Signal, QThread
 
@@ -12,6 +12,7 @@ class BackendWorker(QThread):
             self.settings = settings
             
     def run(self):
+            time.sleep(3) # Test für den Loading Dialog 
             try:
                 # Datenbankabfrage basierend auf settings
                 results = []

@@ -3,6 +3,7 @@ from test_worker import NewsBackend, BackendWorker # test threading
 import os
 from summary_window import SummaryWindow
 from ai_settings import AiSettings
+from loading_dialog import LoadingDialog
 from PySide6.QtCore import QSize, Qt, QDate, Signal, Slot
 from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import (QMainWindow, QPushButton, QStatusBar, QLineEdit, QComboBox,
@@ -289,12 +290,14 @@ class MainWindow(QMainWindow):
             return False
         else:
             self.statusBar().showMessage("Fehler beim Auswählen der Provider [Good News]", 2000)
-
+    
+    # open up a new window to enter the desired ai provider URL and the api-key.  
     def ai_button_clicked(self):
         self.ai_settings_widget = AiSettings()
         self.ai_settings_widget.settings_confirmed.connect(self.update_ai_settings)
         self.ai_settings_widget.show()
 
+    # Save ai settings and errorhandling
     def update_ai_settings(self, ai_provider, api_key):
         self.ai_provider = ai_provider
         self.api_key = api_key
@@ -327,8 +330,10 @@ class MainWindow(QMainWindow):
          # TODO: Loading screen, Threading and
          self.statusBar().showMessage("Artikel werden zusammengefasst... ", 2000)
          settings = self.get_chosen_settings()
-         print(f"settings: {settings}")
 
+         self.loading_dialog = LoadingDialog()
+         self.loading_dialog.show()
+        
          self.backend.process_settings(settings)
 
     # Summarize settings chosen from the User and emit it to the backend
@@ -351,13 +356,20 @@ class MainWindow(QMainWindow):
         self.chosen_settings.emit(settings)
         return settings
     
+    # TODO: connect to real backend
     def initialize_backend(self):
         self.backend = NewsBackend()
         self.backend.results_available.connect(self.on_results_ready)
-        # self.backend.processing_finished.connect(self.on_processing_finished) # IST NUR FÜR DEN LOADINGSCREEN 
+        self.backend.processing_finished.connect(self.on_processing_finished) # Für den Loading screen
 
-    
+    # When the results are ready - open the summary window 
     @Slot(list)
     def on_results_ready(self, results):
         self.summary_window = SummaryWindow(results=results)
         self.summary_window.show()
+
+    # Close Loading Dialog if results are ready. 
+    @Slot()
+    def on_processing_finished(self):
+        if hasattr(self, "loading_dialog") and self.loading_dialog:
+            self.loading_dialog.close()
