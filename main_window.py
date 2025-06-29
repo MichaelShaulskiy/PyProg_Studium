@@ -2,9 +2,10 @@ from test_worker import NewsBackend, BackendWorker # test threading
 
 import os
 from summary_window import SummaryWindow
+from ai_settings import AiSettings
 from PySide6.QtCore import QSize, Qt, QDate, Signal, Slot
 from PySide6.QtGui import QIcon, QPixmap
-from PySide6.QtWidgets import (QMainWindow, QPushButton, QStatusBar, 
+from PySide6.QtWidgets import (QMainWindow, QPushButton, QStatusBar, QLineEdit, QComboBox,
 QHBoxLayout, QVBoxLayout, QWidget, QLabel, QSlider, QDateEdit, 
 )
 
@@ -34,6 +35,7 @@ class MainWindow(QMainWindow):
         self.create_provider_buttons()
         self.create_labels()
         self.create_date_edit()
+        self.create_ai_button()
         self.create_go_button()
         self.create_slider()
         self.create_design_element()
@@ -42,9 +44,9 @@ class MainWindow(QMainWindow):
     # add matching icons, call the button-style-function and connect the buttons to each clicked-function
     def create_provider_buttons(self):
         '''PROVIDER BUTTONS'''
-        self.spiegel_button = QPushButton(icon=QIcon(os.path.join(self.image_path, "Spiegel.jpg")))
-        self.apply_provider_button_style(self.spiegel_button)
-        self.spiegel_button.clicked.connect(self.spiegel_clicked)
+        self.swr_button = QPushButton(icon=QIcon(os.path.join(self.image_path, "SWR.jpg")))
+        self.apply_provider_button_style(self.swr_button)
+        self.swr_button.clicked.connect(self.swr_clicked)
 
         self.tagesschau_button = QPushButton(icon=QIcon(os.path.join(self.image_path, "Tagesschau.jpg")))
         self.apply_provider_button_style(self.tagesschau_button)
@@ -89,6 +91,12 @@ class MainWindow(QMainWindow):
         self.slider_label = QLabel("Set Length ⓘ")
         self.slider_label.enterEvent = lambda z: self.statusBar().showMessage("Länge der gewünschten Zusammenfassung wählen. Default sind 2 Sätze pro Artikel")
         self.slider_label.leaveEvent = lambda z: self.statusBar().clearMessage()
+
+    def create_ai_button(self):
+        '''AI BUTTON'''
+        self.ai_button = QPushButton("AI Settings")
+        self.apply_ai_button_style(self.ai_button)
+        self.ai_button.clicked.connect(self.ai_button_clicked)
 
     # setup the GO! Button, apply it's own style and connect the clicked-function
     def create_go_button(self):
@@ -153,9 +161,10 @@ class MainWindow(QMainWindow):
         v_layout.addWidget(self.slider_label)
         v_layout.addWidget(self.slider)
 
-        # the GO!-button is placed on the lower right corner
-        '''GO! Button Area'''
+        # the settings-button is placed on the lower left, and the AI settings button on the lower right corner
+        '''Go & Settings Button Area'''
         go_layout = QHBoxLayout()
+        go_layout.addWidget(self.ai_button)
         go_layout.addStretch(1)  
         go_layout.addWidget(self.go_button)
         v_layout.addLayout(go_layout)
@@ -168,7 +177,7 @@ class MainWindow(QMainWindow):
         
         '''Upper Row'''
         h_layout_1 = QHBoxLayout()
-        h_layout_1.addWidget(self.spiegel_button)
+        h_layout_1.addWidget(self.swr_button)
         h_layout_1.addWidget(self.tagesschau_button)
         v_layout.addLayout(h_layout_1)
 
@@ -222,22 +231,34 @@ class MainWindow(QMainWindow):
                 border: 3px solid #2980b9;
                 background-color: #009257;
             }
-            QPushButton:checked {
-                border: 3px solid #27ae60;
-                background-color: #009257;
-            }
         """)
 
+    def apply_ai_button_style(self, button):
+        button.setStyleSheet("""QPushButton {
+                background-color: #808080;
+            }
+            QPushButton:hover {
+                border: 2px solid #3daee9;
+                background-color: #646464;
+            }
+            QPushButton:pressed {
+                border: 3px solid #2980b9;
+                background-color: #414141;
+            }                            
+        """
+
+        )
+
     # show an infomsg at the statusbar if the user changes the desired providers (every provider buttons_clicked function)
-    def spiegel_clicked(self):
-        if self.spiegel_button.isChecked() == True:
-            self.statusBar().showMessage("Spiegel ausgewählt ✓", 2000)
+    def swr_clicked(self):
+        if self.swr_button.isChecked() == True:
+            self.statusBar().showMessage("SWR ausgewählt ✓", 2000)
             return True
-        elif self.spiegel_button.isChecked() == False:
-            self.statusBar().showMessage("Spiegel abgewählt ✕", 2000)
+        elif self.swr_button.isChecked() == False:
+            self.statusBar().showMessage("SWR abgewählt ✕", 2000)
             return False
         else:
-            self.statusBar().showMessage("Fehler beim Auswählen der Provider [SPIEGEL]", 2000)
+            self.statusBar().showMessage("Fehler beim Auswählen der Provider [SWR", 2000)
      
     def welt_clicked(self):
         if self.welt_button.isChecked() == True:
@@ -269,6 +290,20 @@ class MainWindow(QMainWindow):
         else:
             self.statusBar().showMessage("Fehler beim Auswählen der Provider [Good News]", 2000)
 
+    def ai_button_clicked(self):
+        self.ai_settings_widget = AiSettings()
+        self.ai_settings_widget.settings_confirmed.connect(self.update_ai_settings)
+        self.ai_settings_widget.show()
+
+    def update_ai_settings(self, ai_provider, api_key):
+        self.ai_provider = ai_provider
+        self.api_key = api_key
+        if ai_provider == "":
+            ai_provider = "FEHLER: Keine Endpoint-URL angegeben"
+            self.statusBar().showMessage(f"Fehler bei der Endpoint-URL", 2000)
+        else:    
+            self.statusBar().showMessage(f"KI-Provider aktualisiert: {ai_provider}", 2000)
+
     # change the slider style to make it more intuitive to use
     def apply_slider_style(self, slider):
         slider.setMinimum(1)
@@ -292,7 +327,7 @@ class MainWindow(QMainWindow):
          # TODO: Loading screen, Threading and
          self.statusBar().showMessage("Artikel werden zusammengefasst... ", 2000)
          settings = self.get_chosen_settings()
-
+         print(f"settings: {settings}")
 
          self.backend.process_settings(settings)
 
@@ -300,7 +335,7 @@ class MainWindow(QMainWindow):
     def get_chosen_settings(self):
         settings = {
             # isChecked returns a bool.
-            "spiegel": self.spiegel_button.isChecked(), # source_id "4" in News.db 
+            "swr": self.swr_button.isChecked(), # source_id "4" in News.db 
             "welt": self.welt_button.isChecked(), # source_id "2" in News.db 
             "tagesschau": self.tagesschau_button.isChecked(), # source_id "1" in News.db 
             "good_news":self.good_news_button.isChecked(), # source_id "3" in News.db 
@@ -308,7 +343,10 @@ class MainWindow(QMainWindow):
             "date": self.date_edit.date().toString("yyyy-MM-dd"),
             # returns an int between 1 and 4.
             # (each Article: 1 = 1 Sentence, 2 = 2 Sentences, 3 = 4 Sentences, 4 = 6 Sentences)
-            "length": self.slider.value()
+            "length": self.slider.value(),
+            # returns the set ai provider and api key 
+            "api_key": self.api_key,
+            "ai_provider": self.ai_provider
         }
         self.chosen_settings.emit(settings)
         return settings
@@ -323,5 +361,3 @@ class MainWindow(QMainWindow):
     def on_results_ready(self, results):
         self.summary_window = SummaryWindow(results=results)
         self.summary_window.show()
-
-

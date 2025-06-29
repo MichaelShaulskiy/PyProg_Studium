@@ -43,7 +43,7 @@ class ArticleProcessor:
     """
 
     def __init__(self, article_id= 0, parent_site = None) -> None:
-        self.id = id
+        self.id = article_id
         self.soup = None
         self._newssite = parent_site
 
@@ -89,6 +89,90 @@ class TagesschauProcessor(ArticleProcessor):
             cursor = self._newssite.db.cursor()
             cursor.execute("UPDATE NewsArticles SET article_text = ? WHERE article_id = ?", (article_text, self.article_id))
             self._newssite.db.commit()
+            return article_text
+        else:
+            return "skip"
+        
+class WeltProcessor(ArticleProcessor):
+
+    def __init__(self, article_id: int = 0, parent_site = None) -> None:
+        super().__init__(article_id=article_id, parent_site=parent_site)
+        cursor: sqlite3.Cursor = self._newssite.db.cursor()
+        self.article_id = article_id
+        cursor.execute("SELECT raw_article FROM NewsArticles WHERE article_id = ?", (article_id,))
+        result = cursor.fetchone()
+        if result is None:
+            raise Exception("Article not found in database")
+        self._article = result[0]
+        self._newssite.db.commit()
+        self.soup = BeautifulSoup(self._article, "html.parser")
+
+
+    def content(self):
+        if not self.soup:
+            raise Exception("soup not initialized")
+        
+        content_node = self.soup.find("div", class_="c-article-page__content")
+        if content_node:
+            article_text = " " .join(content_node.get_text().splitlines())
+            cursor = self._newssite.db.cursor()
+            cursor.execute("UPDATE NewsArticles SET article_text = ? WHERE article_id = ?", (article_text, self.article_id))
+            self._newssite.db.commit()
+            return article_text
+        
+class SpiegelProcessor(ArticleProcessor):
+
+    def __init__(self, article_id: int = 0, parent_site = None) -> None:
+        super().__init__(article_id=article_id, parent_site=parent_site)
+        cursor: sqlite3.Cursor = self._newssite.db.cursor()
+        self.article_id = article_id
+        cursor.execute("SELECT raw_article FROM NewsArticles WHERE article_id = ?", (article_id,))
+        result = cursor.fetchone()
+        if result is None:
+            raise Exception("Article not found in database")
+        self._article = result[0]
+        self._newssite.db.commit()
+        self.soup = BeautifulSoup(self._article, "html.parser")
+
+
+    def content(self):
+        if not self.soup:
+            raise Exception("soup not initialized")
+        
+        content_node = self.soup.find("section", class_="relative")
+        if content_node:
+            article_text = " " .join(content_node.get_text().splitlines())
+            cursor = self._newssite.db.cursor()
+            cursor.execute("UPDATE NewsArticles SET article_text = ? WHERE article_id = ?", (article_text, self.article_id))
+            self._newssite.db.commit()
+            return article_text
+        
+class SZProcessor(ArticleProcessor):
+
+    def __init__(self, article_id: int = 0, parent_site = None) -> None:
+        super().__init__(article_id=article_id, parent_site=parent_site)
+        cursor: sqlite3.Cursor = self._newssite.db.cursor()
+        self.article_id = article_id
+        cursor.execute("SELECT raw_article FROM NewsArticles WHERE article_id = ?", (article_id,))
+        result = cursor.fetchone()
+        if result is None:
+            raise Exception("Article not found in database")
+        self._article = result[0]
+        self._newssite.db.commit()
+        self.soup = BeautifulSoup(self._article, "html.parser")
+
+
+    def content(self):
+        if not self.soup:
+            raise Exception("soup not initialized")
+        
+        content_node = self.soup.find("div", class_="cXsenseParse", attrs={"data-testid": "article-content"})
+        if content_node:
+            article_text = " " .join(content_node.get_text().splitlines())
+            cursor = self._newssite.db.cursor()
+            cursor.execute("UPDATE NewsArticles SET article_text = ? WHERE article_id = ?", (article_text, self.article_id))
+            self._newssite.db.commit()
+            return article_text
             
 
 class NewsSite:
@@ -148,7 +232,7 @@ class NewsSite:
         article_id = self._articles[self._current_index]
         result = self.article_processor(article_id, self)
         self._current_index += 1
-        return result.content()
+        return result
 
     def __len__(self) -> int:
         cursor = self.db.cursor()

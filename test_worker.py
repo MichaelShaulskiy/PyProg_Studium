@@ -19,7 +19,7 @@ class BackendWorker(QThread):
                     cursor = conn.cursor()
                     
                     if self.settings.get("spiegel", True):
-                        cursor.execute("SELECT raw_article FROM NewsArticles WHERE source_id = 4")
+                        cursor.execute("SELECT summary FROM NewsArticles WHERE source_id = 1")
                         results.extend(cursor.fetchall())
                         
                 
