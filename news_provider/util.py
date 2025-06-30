@@ -35,15 +35,17 @@ def cacheenabledressource(source_index: int):
                 response.encoding = "utf-8"
                 response.reason = "OK"
                 return response
+
             else:
                 # get the resource and put it into the database
                 response = orig_get(*args, **kwargs)
                 timestamp = datetime.now().timestamp()
+                date_str = datetime.now().strftime("%Y-%m-%d")  # Add date as string
                 pprint(source_index)
                 cursor.execute("""
-                               INSERT INTO NewsArticles (source_id, raw_article, hash, timestamp, article_link)
-                               VALUES (?, ?, ?, ?, ?);""",
-                               (source_index, response.text, thehash.hexdigest(), timestamp, args[0]))
+                               INSERT INTO NewsArticles (source_id, raw_article, hash, timestamp, article_link, date)
+                               VALUES (?, ?, ?, ?, ?, ?);""",
+                               (source_index, response.text, thehash.hexdigest(), timestamp, args[0], date_str))
                 db_connection.commit()
                 return response
 

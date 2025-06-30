@@ -7,12 +7,12 @@ from typing import List, Tuple, Optional, Any
 from bs4 import BeautifulSoup
 import sqlite3
 import time
-from PySide6.QtCore import QObject, Signal, Slot, QCoreApplication
+from PySide6.QtCore import QObject, Signal, Slot, QCoreApplication, QThread
 from news_provider.rssparser import RSSItem, RSS
-from news_provider.provider import NewsSite, NewsSourceIndex, TagesschauProcessor, WeltProcessor, SpiegelProcessor, SZProcessor
+from news_provider.provider import NewsSite, NewsSourceIndex, TagesschauProcessor, WeltProcessor, SWRProcessor, SZProcessor, GoodNewsProcessor
 
-OPENROUTER = "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"
-MODEL = "gemma-3-12b-it-qat"
+ENDPOINT = "https://openrouter.ai/api/v1" #http://127.0.0.1:1234/v1"
+MODEL = "deepseek/deepseek-chat-v3-0324:free"
 NEWS_SITES = []
 NEWS_SOURCES = [
     {
@@ -24,12 +24,12 @@ NEWS_SOURCES = [
         "url": "https://www.welt.de/?service=Rss"
     },
     {
-        "name": "SZ",
-        "url": "https://rss.sueddeutsche.de/rss/Topthemen"
+        "name": "GoodNews",
+        "url": "https://www.goodnewsnetwork.org/category/news/feed/"
     },
     {
-        "name": "Spiegel",
-        "url": "https://www.spiegel.de/schlagzeilen/tops/index.rss"
+        "name": "SWR",
+        "url": "https://www.swr.de/~rss/index.xml"
     }
 ] 
 
@@ -82,10 +82,22 @@ def initial_rss_fetch():
     with sqlite3.connect("News.db") as conn:
         cursor = conn.cursor()
 
-client = OpenAI(
-    base_url="http://127.0.0.1:1234/v1",
-    api_key=OPENROUTER
-) 
+def rss_fetch():
+    for source in NEWS_SOURCES:
+        rss_feed = fetch_with_retry(source["url"])
+
+        with sqlite3.connect("News.db") as conn:
+            cursor = conn.cursor()
+            # Update the existing NewsSources entry for this source
+            cursor.execute("""
+                UPDATE NewsSources
+                SET last_queried = ?, rss_content = ?
+                WHERE name = ? AND url = ?
+                """, (int(time.time()), rss_feed, source["name"], source["url"]))
+            conn.commit()
+
+client = None
+
 
 def summarize(art: str) -> str:
     completion = client.chat.completions.create(
@@ -93,7 +105,7 @@ def summarize(art: str) -> str:
         messages=[
             {
                 "role": "system",
-                "content": "Du fasst den dir übegerbenen Nachrichtenartikel so kurz wie nur möglich auf das wesentliche zusammen. Die zusammenfassung sollte kurz sein, höchstens 2 kurze abschnitte. Sollte der artikel in einer anderen sprache als deutsch vorliegen soll die zusammenfassung dennoch auf deutsch sein. Benutze keine emojis oder markdown. Einfach simpler text"
+                "content": "Du fasst den dir übegerbenen Nachrichtenartikel so kurz wie nur möglich auf das wesentliche zusammen. Sollte der artikel in einer anderen sprache als deutsch vorliegen soll die zusammenfassung dennoch auf deutsch sein. Benutze keine emojis oder markdown. Einfach simpler text. Solltest du keine zusammenfassung erstellen können liefer einfach ein leerzeichen zurück"
             },
             {
                 "role": "user",
@@ -105,44 +117,78 @@ def summarize(art: str) -> str:
     return res
 
 
+class QNewsBackend(QThread):
+    results_ready = Signal(list)
+    processing_complete = Signal()
 
-def main():
+    def __init__(self, settings):
+        super().__init__()
+        self.settings = settings
+
+    def run(self):
+        results = main(self.settings)  # main returns the summary/results
+        pprint(results)
+        self.results_ready.emit(results)
+        self.processing_complete.emit()
+
+SUMMARY_LEN = {
+    1: "1 bis 2 Sätze",
+    2: "2 bis 3 Sätze",
+    3: "4 bis 5 Sätze",
+    4: "6 bis 8 Sätze"
+}
+
+@Slot(dict)
+def main(settings: dict) -> list:
+    pprint(settings["model_id"])
+    global MODEL
+    MODEL = settings["model_id"]
+    global client
+    client = OpenAI(
+        base_url=settings["ai_provider"],
+        api_key=settings["api_key"]
+    )
     #setup_db()
-    tagesschau = NewsSite(1)
-    welt = NewsSite(2)
-    sz = NewsSite(3)
-    spiegel = NewsSite(4)
+    rss_fetch()
+    news_providers = {
+        "tagesschau": NewsSite(1),
+        "welt": NewsSite(2),
+        "good_news": NewsSite(3),
+        "swr": NewsSite(4)
+    }
+    news_providers["tagesschau"].addArticleProcessor(TagesschauProcessor)
+    news_providers["welt"].addArticleProcessor(WeltProcessor)
+    news_providers["good_news"].addArticleProcessor(GoodNewsProcessor)
+    news_providers["swr"].addArticleProcessor(SWRProcessor)
 
-    pprint(len(welt))
-    tagesschau.addArticleProcessor(TagesschauProcessor)
-    welt.addArticleProcessor(WeltProcessor)
-    spiegel.addArticleProcessor(SpiegelProcessor)
-    sz.addArticleProcessor(SZProcessor)
+    summaries = []
+    sources = []
+    for provider in news_providers.keys():
+        if settings[provider]:
+            sources.append(news_providers[provider])
 
-    whole = []
+    for source in sources:
+        for article in source:
+            with sqlite3.connect("News.db") as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT summary FROM NewsArticles WHERE article_id = ?", (article.id,))
+                result = cursor.fetchone()
 
-    for article in tagesschau:
-        with sqlite3.connect("News.db") as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT summary FROM NewsArticles WHERE article_id = ?", (article.id,))
-            result = cursor.fetchone()
-
-            if result and result[0]:
-                summary = result[0]
-            else:
-                summary = summarize(article.content())
-                cursor.execute("UPDATE NewsArticles SET summary = ? WHERE article_id = ?", (summary, article.id))
-                conn.commit()
-        whole.append(summary)
+                if result and result[0]:
+                    summary = result[0]
+                else:
+                    summary = summarize(article.content())
+                    cursor.execute("UPDATE NewsArticles SET summary = ? WHERE article_id = ?", (summary, article.id))
+                    conn.commit()
+            summaries.append(summary)
     
-    whole = " ".join(whole)
-    print(len(whole))
+    whole = "<SYSTEM:NEWARTICLE>".join(summaries)
     completion = client.chat.completions.create(
         model=MODEL,
         messages=[
             {
                 "role": "system",
-                "content": "Du fasst die dir hier übegebenen zusammenfassungen von Nachrichtenartikeln aus allerlei Quellen in einen kurzen bis mittellangen überblick zusammen"
+                "content": f"Du erstellst aus den dir übergebenen Nachrichten des Tages eine Zusammenfassung. Jedes <SYSTEM:NEWARTICLE> markiert den beginn eines neuen artikels. Es müssen alle artikel zusammengefasst werden. Die zusammenfassung sollte pro artikel in etwa ungefähr {SUMMARY_LEN[settings["length"]]} betragen."
             },
             {
                 "role": "user",
@@ -151,8 +197,11 @@ def main():
         ]
     )
 
-    print(completion.choices[0].message.content)
+    return completion.choices[0].message.content
+    #return whole
+
 
 
 if __name__ == "__main__":
-    main()
+    #main()
+    pass

@@ -2,6 +2,7 @@ from database import get_db_connection
 from bs4 import BeautifulSoup
 import requests as req
 from pprint import pprint
+import sqlite3
 
 class RSSChannelMetadata:
 
@@ -41,7 +42,7 @@ class RSSItem:
 class RSS(object):
 
     def __init__(self, source_index: int) -> None:
-        conn = get_db_connection()
+        conn = sqlite3.connect("News.db")
         #self.feed_url = url
         self.source_index = source_index
         self.feed_content = None

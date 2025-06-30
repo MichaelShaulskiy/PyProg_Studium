@@ -13,12 +13,12 @@ NEWS_SOURCES = [
         "url": "https://www.welt.de/?service=Rss"
     },
     {
-        "name": "SZ",
-        "url": "https://rss.sueddeutsche.de/rss/Topthemen"
+        "name": "GoodNews",
+        "url": "https://www.goodnewsnetwork.org/category/news/feed/"
     },
     {
-        "name": "Spiegel",
-        "url": "https://www.spiegel.de/schlagzeilen/tops/index.rss"
+        "name": "SWR",
+        "url": "https://www.swr.de/~rss/index.xml"
     }
 ] 
 
@@ -48,6 +48,7 @@ if __name__ == "__main__":
                         article_link TEXT,
                         category TEXT,
                         timestamp INTEGER,
+                        date TEXT,
                         reading_time INTEGER,
                         subscription INTEGER,
                         hash TEXT,

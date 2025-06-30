@@ -68,27 +68,31 @@ class TagesschauProcessor(ArticleProcessor):
 
     def __init__(self, article_id: int = 0, parent_site = None) -> None:
         super().__init__(article_id=article_id, parent_site=parent_site)
-        cursor: sqlite3.Cursor = self._newssite.db.cursor()
+        conn = sqlite3.connect("News.db")
+        cursor: sqlite3.Cursor = conn.cursor()
         self.article_id = article_id
         cursor.execute("SELECT raw_article FROM NewsArticles WHERE article_id = ?", (article_id,))
         result = cursor.fetchone()
         if result is None:
             raise Exception("Article not found in database")
         self._article = result[0]
-        self._newssite.db.commit()
+        conn.commit()
+        conn.close()
         self.soup = BeautifulSoup(self._article, "html.parser")
 
 
     def content(self):
         if not self.soup:
             raise Exception("soup not initialized")
-        
-        content_node = self.soup.find("div", id="content").article
-        if content_node:
-            article_text = " " .join(content_node.get_text().splitlines())
-            cursor = self._newssite.db.cursor()
+        div_content = self.soup.find("div", id="content")
+        if div_content and div_content.article:
+            content_node = div_content.article
+            article_text = " ".join(content_node.get_text().splitlines())
+            conn = sqlite3.connect("News.db")
+            cursor = conn.cursor()
             cursor.execute("UPDATE NewsArticles SET article_text = ? WHERE article_id = ?", (article_text, self.article_id))
-            self._newssite.db.commit()
+            conn.commit()
+            conn.close()
             return article_text
         else:
             return "skip"
@@ -97,14 +101,16 @@ class WeltProcessor(ArticleProcessor):
 
     def __init__(self, article_id: int = 0, parent_site = None) -> None:
         super().__init__(article_id=article_id, parent_site=parent_site)
-        cursor: sqlite3.Cursor = self._newssite.db.cursor()
+        conn = sqlite3.connect("News.db")
+        cursor: sqlite3.Cursor = conn.cursor()
         self.article_id = article_id
         cursor.execute("SELECT raw_article FROM NewsArticles WHERE article_id = ?", (article_id,))
         result = cursor.fetchone()
         if result is None:
             raise Exception("Article not found in database")
         self._article = result[0]
-        self._newssite.db.commit()
+        conn.commit()
+        conn.close()
         self.soup = BeautifulSoup(self._article, "html.parser")
 
 
@@ -115,23 +121,35 @@ class WeltProcessor(ArticleProcessor):
         content_node = self.soup.find("div", class_="c-article-page__content")
         if content_node:
             article_text = " " .join(content_node.get_text().splitlines())
-            cursor = self._newssite.db.cursor()
+            conn = sqlite3.connect("News.db")
+            cursor = conn.cursor()
             cursor.execute("UPDATE NewsArticles SET article_text = ? WHERE article_id = ?", (article_text, self.article_id))
-            self._newssite.db.commit()
+            conn.commit()
+            conn.close()
             return article_text
+        else:
+            with sqlite3.connect("News.db") as conn:
+                cursor = conn.cursor()
+                cursor.execute("UPDATE NewsArticles SET article_text = ? WHERE article_id = ?", ("Artikel nicht gefunden", self.article_id))
+                conn.commit()
+            return "Artikel nicht gefunden"
+
+
         
 class SpiegelProcessor(ArticleProcessor):
 
     def __init__(self, article_id: int = 0, parent_site = None) -> None:
         super().__init__(article_id=article_id, parent_site=parent_site)
-        cursor: sqlite3.Cursor = self._newssite.db.cursor()
+        conn = sqlite3.connect("News.db")
+        cursor: sqlite3.Cursor = conn.cursor()
         self.article_id = article_id
         cursor.execute("SELECT raw_article FROM NewsArticles WHERE article_id = ?", (article_id,))
         result = cursor.fetchone()
         if result is None:
             raise Exception("Article not found in database")
         self._article = result[0]
-        self._newssite.db.commit()
+        conn.commit()
+        conn.close()
         self.soup = BeautifulSoup(self._article, "html.parser")
 
 
@@ -142,23 +160,27 @@ class SpiegelProcessor(ArticleProcessor):
         content_node = self.soup.find("section", class_="relative")
         if content_node:
             article_text = " " .join(content_node.get_text().splitlines())
-            cursor = self._newssite.db.cursor()
+            conn = sqlite3.connect("News.db")
+            cursor = conn.cursor()
             cursor.execute("UPDATE NewsArticles SET article_text = ? WHERE article_id = ?", (article_text, self.article_id))
-            self._newssite.db.commit()
+            conn.commit()
+            conn.close()
             return article_text
         
 class SZProcessor(ArticleProcessor):
 
     def __init__(self, article_id: int = 0, parent_site = None) -> None:
         super().__init__(article_id=article_id, parent_site=parent_site)
-        cursor: sqlite3.Cursor = self._newssite.db.cursor()
+        conn = sqlite3.connect("News.db")
+        cursor: sqlite3.Cursor = conn.cursor()
         self.article_id = article_id
         cursor.execute("SELECT raw_article FROM NewsArticles WHERE article_id = ?", (article_id,))
         result = cursor.fetchone()
         if result is None:
             raise Exception("Article not found in database")
         self._article = result[0]
-        self._newssite.db.commit()
+        conn.commit()
+        conn.close()
         self.soup = BeautifulSoup(self._article, "html.parser")
 
 
@@ -169,32 +191,85 @@ class SZProcessor(ArticleProcessor):
         content_node = self.soup.find("div", class_="cXsenseParse", attrs={"data-testid": "article-content"})
         if content_node:
             article_text = " " .join(content_node.get_text().splitlines())
-            cursor = self._newssite.db.cursor()
+            conn = sqlite3.connect("News.db")
+            cursor = conn.cursor()
             cursor.execute("UPDATE NewsArticles SET article_text = ? WHERE article_id = ?", (article_text, self.article_id))
-            self._newssite.db.commit()
+            conn.commit()
+            conn.close()
             return article_text
+        
+class SWRProcessor(ArticleProcessor):
+
+    def __init__(self, article_id: int = 0, parent_site = None) -> None:
+        super().__init__(article_id=article_id, parent_site=parent_site)
+        conn = sqlite3.connect("News.db")
+        cursor: sqlite3.Cursor = conn.cursor()
+        self.article_id = article_id
+        cursor.execute("SELECT raw_article FROM NewsArticles WHERE article_id = ?", (article_id,))
+        result = cursor.fetchone()
+        if result is None:
+            raise Exception("Article not found in database")
+        self._article = result[0]
+        conn.commit()
+        conn.close()
+        self.soup = BeautifulSoup(self._article, "html.parser")
+
+
+    def content(self):
+        if not self.soup:
+            raise Exception("soup not initialized")
+        
+        content_node = self.soup.find("article", id="article")
+        if content_node:
+            article_text = " " .join(content_node.get_text().splitlines())
+            conn = sqlite3.connect("News.db")
+            cursor = conn.cursor()
+            cursor.execute("UPDATE NewsArticles SET article_text = ? WHERE article_id = ?", (article_text, self.article_id))
+            conn.commit()
+            conn.close()
+            return article_text
+        else:
+            return "skip"
+        
+class GoodNewsProcessor(ArticleProcessor):
+
+    def __init__(self, article_id: int = 0, parent_site = None) -> None:
+        super().__init__(article_id=article_id, parent_site=parent_site)
+        conn = sqlite3.connect("News.db")
+        cursor: sqlite3.Cursor = conn.cursor()
+        self.article_id = article_id
+        cursor.execute("SELECT raw_article FROM NewsArticles WHERE article_id = ?", (article_id,))
+        result = cursor.fetchone()
+        if result is None:
+            raise Exception("Article not found in database")
+        self._article = result[0]
+        conn.commit()
+        conn.close()
+        self.soup = BeautifulSoup(self._article, "html.parser")
+
+
+    def content(self):
+        if not self.soup:
+            raise Exception("soup not initialized")
+        
+        content_node = self.soup.find("div", class_="td-ss-main-content")
+        if content_node:
+            article_text = " " .join(content_node.get_text().splitlines())
+            conn = sqlite3.connect("News.db")
+            cursor = conn.cursor()
+            cursor.execute("UPDATE NewsArticles SET article_text = ? WHERE article_id = ?", (article_text, self.article_id))
+            conn.commit()
+            conn.close()
+            return article_text
+        else:
+            return "skip"
             
 
 class NewsSite:
 
     def __init__(self, source_index: NewsSourceIndex | int, article_processor: None | ArticleProcessor = None) -> None:
         self.source_index = source_index
-        self.db = get_db_connection()
-        self.rss_provider = None
-        self.article_processor = article_processor
-        self._current_index = 0
-        # lookup if the source index points to a valid news source
-        self.cursor = self.db.cursor()
-        result = self.cursor.execute("SELECT source_id FROM NewsSources WHERE source_id = ?", (source_index,))
-        result = result.fetchone()
-        self_article_id = None
-        self.db.commit()
-
-        if result is None:
-            raise Exception("Invalid News Source")
-        
         self.rss_provider = RSS(source_index)
-
         self._articles = []
 
         @cacheenabledressource(self.source_index)
@@ -202,9 +277,21 @@ class NewsSite:
             return NewsUtil.fetch_articles(url)
         
         for item in self.rss_provider.items():
-            
             art = cached_fetch_articles(item.link)
             self._articles.append(art)
+
+        self.article_processor = article_processor
+        self._current_index = 0
+        # Query all article_ids for this source_id and store them
+        with sqlite3.connect("News.db") as conn:
+            cursor = conn.cursor()
+            result = cursor.execute("SELECT source_id FROM NewsSources WHERE source_id = ?", (source_index,))
+            result = result.fetchone()
+            if result is None:
+                raise Exception("Invalid News Source")
+            cursor.execute("SELECT article_id FROM NewsArticles WHERE source_id = ?", (self.source_index,))
+            self._articles = [row[0] for row in cursor.fetchall()]
+        self._current_index = 0
 
     # Builder Pattern could be useful here
     def addArticleProcessor(self, aproc_constructor: type[ArticleProcessor]):
@@ -218,9 +305,6 @@ class NewsSite:
         self.article_processor = self.article_processor(self._current_index, self)
     
     def __iter__(self):
-        # Query all article_ids for this source_id and store them
-        self.cursor.execute("SELECT article_id FROM NewsArticles WHERE source_id = ?", (self.source_index,))
-        self._articles = [row[0] for row in self.cursor.fetchall()]
         self._current_index = 0
         return self
     
