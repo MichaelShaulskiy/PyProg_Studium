@@ -78,7 +78,7 @@ class SummaryWindow(QWidget):
              formatted_text = "<h2>Artikel aus der Datenbank</h2>"
              for result in self.results:
                     article_text = result[0]
-                    formatted_text += f"<p>{article_text}</p><hr>"g
+                    formatted_text += f"<p>{article_text}</p><hr>"
              return formatted_text
         except Exception as e: 
             return f"<p>Fehler beim Laden der Artikel: {str(e)}</p>"
