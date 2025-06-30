@@ -161,26 +161,43 @@ def main(settings: dict) -> list:
     news_providers["good_news"].addArticleProcessor(GoodNewsProcessor)
     news_providers["swr"].addArticleProcessor(SWRProcessor)
 
+    print_article_ids_for_date(settings["date"])
+
     summaries = []
     sources = []
     for provider in news_providers.keys():
         if settings[provider]:
             sources.append(news_providers[provider])
 
+    pprint(sources)
+
     for source in sources:
-        for article in source:
+        with sqlite3.connect("News.db") as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT article_id FROM NewsArticles WHERE source_id = ? AND date = ?", (source.source_index, settings["date"]))
+            article_ids_for_date = [row[0] for row in cursor.fetchall()]
+
+        for article_id in article_ids_for_date:
+            article = source.article_processor(article_id, source)
             with sqlite3.connect("News.db") as conn:
                 cursor = conn.cursor()
+                #only summarize if a summary doesn't already exist
                 cursor.execute("SELECT summary FROM NewsArticles WHERE article_id = ?", (article.id,))
                 result = cursor.fetchone()
 
                 if result and result[0]:
                     summary = result[0]
                 else:
-                    summary = summarize(article.content())
-                    cursor.execute("UPDATE NewsArticles SET summary = ? WHERE article_id = ?", (summary, article.id))
-                    conn.commit()
-            summaries.append(summary)
+                    content = article.content()
+                    if content and content != "skip":
+                        summary = summarize(content)
+                        cursor.execute("UPDATE NewsArticles SET summary = ? WHERE article_id = ?", (summary, article.id))
+                        conn.commit()
+                    else:
+                        summary = ""
+            
+            if summary:
+                summaries.append(summary)
     
     whole = "<SYSTEM:NEWARTICLE>".join(summaries)
     completion = client.chat.completions.create(
@@ -200,8 +217,12 @@ def main(settings: dict) -> list:
     return completion.choices[0].message.content
     #return whole
 
-
+def print_article_ids_for_date(date_str):
+    with sqlite3.connect("News.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT article_id FROM NewsArticles WHERE date = ?", (date_str,))
+        article_ids = [row[0] for row in cursor.fetchall()]
+        print(f"Article IDs for date {date_str}: {article_ids}")
 
 if __name__ == "__main__":
-    #main()
     pass
